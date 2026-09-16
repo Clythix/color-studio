@@ -216,7 +216,7 @@
 
     .generator-box {
       display: flex;
-      height: 60vh;
+      height: 50vh;
       border-radius: var(--card-radius);
       overflow: hidden;
       border: 1px solid var(--border);
@@ -233,10 +233,15 @@
       align-items: center;
       padding: 30px 0;
       transition: flex 0.2s;
+      cursor: pointer;
     }
     .gen-col:hover { flex: 1.2; }
     .gen-lock { background: rgba(0,0,0,0.25); border: none; color: white; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-    .gen-hex { background: rgba(0,0,0,0.25); color: white; padding: 8px 16px; border-radius: 8px; font-family: 'Space Mono', monospace; font-weight: 700; cursor: pointer; }
+    .gen-hex { background: rgba(0,0,0,0.25); color: white; padding: 8px 16px; border-radius: 8px; font-family: 'Space Mono', monospace; font-weight: 700; }
+
+    /* Shades Tray Added */
+    .shades-tray { display: flex; height: 60px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-top: 15px; }
+    .shade-box { flex: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: white; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
 
     .explore-grid {
       display: grid;
@@ -270,6 +275,23 @@
       gap: 24px;
     }
     @media (max-width: 768px) { .contrast-box { grid-template-columns: 1fr; } }
+
+    /* Export Modal Added */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 3000;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-content {
+      background: white; border: 1px solid var(--border);
+      border-radius: 20px; padding: 30px; width: 100%; max-width: 500px;
+      display: flex; flex-direction: column; gap: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    .modal-textarea {
+      width: 100%; height: 150px; background: #f4f4f5; border: 1px solid var(--border);
+      color: var(--text); padding: 12px; border-radius: 10px; font-family: 'Space Mono', monospace; font-size: 0.85rem; resize: none;
+    }
 
     .toast {
       position: fixed;
@@ -368,9 +390,16 @@
     <button class="back-nav-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
     <div class="workspace-header">
       <h2>Palette Generator <span style="font-size: 0.8rem; font-weight: normal; color: var(--muted);">(Press Spacebar to Generate)</span></h2>
-      <button class="btn" onclick="generateColors()"><i class="fa-solid fa-shuffle"></i> Generate</button>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="openExportModal()"><i class="fa-solid fa-code"></i> Export</button>
+        <button class="btn" onclick="generateColors()"><i class="fa-solid fa-shuffle"></i> Generate</button>
+      </div>
     </div>
     <div class="generator-box" id="generatorBox"></div>
+    <div>
+      <h4 style="margin-bottom: 8px; font-size: 0.9rem; color: var(--muted);">Shades & Tints (Click any column above to inspect)</h4>
+      <div class="shades-tray" id="shadesTray"></div>
+    </div>
   </div>
 
   <!-- VIEW 3: EXPLORE PALETTES -->
@@ -423,6 +452,23 @@
     </div>
   </div>
 
+  <!-- EXPORT MODAL -->
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Export Palette</h3>
+        <button onclick="closeExportModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="setExportFormat('css')">CSS</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="setExportFormat('tailwind')">Tailwind</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="setExportFormat('json')">JSON</button>
+      </div>
+      <textarea class="modal-textarea" id="exportTextarea" readonly></textarea>
+      <button class="btn" onclick="copyExportCode()">Copy Code</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast">Copied to clipboard!</div>
 
   <script>
@@ -468,17 +514,29 @@
       { hex: '#4ade80', locked: false },
       { hex: '#38bdf8', locked: false }
     ];
+    let activeBaseIndex = 0;
+
+    function hexToRgb(hex) {
+      let bigint = parseInt(hex.replace('#',''), 16);
+      return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+    }
 
     function renderGenerator() {
       const box = document.getElementById('generatorBox');
       box.innerHTML = genColors.map((c, i) => `
-        <div class="gen-col" style="background-color: ${c.hex}">
-          <button class="gen-lock" onclick="toggleGenLock(${i})">
+        <div class="gen-col" style="background-color: ${c.hex}" onclick="setActiveBase(${i})">
+          <button class="gen-lock" onclick="event.stopPropagation(); toggleGenLock(${i})">
             <i class="fa-solid ${c.locked ? 'fa-lock' : 'fa-lock-open'}"></i>
           </button>
-          <div class="gen-hex" onclick="navigator.clipboard.writeText('${c.hex}'); showToast('Copied ${c.hex}')">${c.hex.toUpperCase()}</div>
+          <div class="gen-hex" onclick="event.stopPropagation(); navigator.clipboard.writeText('${c.hex}'); showToast('Copied ${c.hex}')">${c.hex.toUpperCase()}</div>
         </div>
       `).join('');
+      renderShades(genColors[activeBaseIndex].hex);
+    }
+
+    function setActiveBase(i) {
+      activeBaseIndex = i;
+      renderShades(genColors[i].hex);
     }
 
     function toggleGenLock(i) {
@@ -497,6 +555,40 @@
         generateColors();
       }
     });
+
+    function renderShades(hex) {
+      const rgb = hexToRgb(hex);
+      const tray = document.getElementById('shadesTray');
+      let html = '';
+      for (let i = 1; i <= 5; i++) {
+        let factor = i * 0.15;
+        let sh = '#' + rgb.map(v => Math.min(255, Math.floor(v * (1 - factor))).toString(16).padStart(2,'0')).join('');
+        html += `<div class="shade-box" style="background:${sh}" onclick="navigator.clipboard.writeText('${sh}'); showToast('Copied ${sh}')">${sh}</div>`;
+      }
+      tray.innerHTML = html;
+    }
+
+    // Export Modal Logic
+    let currentExportFormat = 'css';
+    function openExportModal() { document.getElementById('exportModal').classList.add('show'); updateExportText(); }
+    function closeExportModal() { document.getElementById('exportModal').classList.remove('show'); }
+    function setExportFormat(fmt) { currentExportFormat = fmt; updateExportText(); }
+    function updateExportText() {
+      let colors = genColors.map(c => c.hex);
+      let text = '';
+      if (currentExportFormat === 'css') {
+        text = `:root {\n` + colors.map((c, i) => `  --color-${i+1}: ${c};`).join('\n') + `\n}`;
+      } else if (currentExportFormat === 'tailwind') {
+        text = `// Tailwind config colors\ncolors: {\n` + colors.map((c, i) => `  'color-${i+1}': '${c}',`).join('\n') + `\n}`;
+      } else {
+        text = JSON.stringify(colors, null, 2);
+      }
+      document.getElementById('exportTextarea').value = text;
+    }
+    function copyExportCode() {
+      navigator.clipboard.writeText(document.getElementById('exportTextarea').value);
+      showToast('Export code copied!');
+    }
 
     const explorePalettes = [
       ["#2e3440", "#3b4252", "#88c0d0", "#8fbcbb", "#eceff4"],
