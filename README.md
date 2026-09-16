@@ -1,6 +1,8 @@
 # Clythix // Professional Color Suite 🎨
 
-Clythix is a lightning-fast, feature-rich web application built for designers and developers to create, explore, extract, and check color palettes with ease.
+> **[✨ View Live Demo](https://clythixcolors.vercel.app)**
+
+Clythix.colors is a lightning-fast, feature-rich web application built for designers and developers to create, explore, extract, and check color palettes with ease.
 
 ## ✨ Features
 
