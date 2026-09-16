@@ -216,7 +216,7 @@
 
     .generator-box {
       display: flex;
-      height: 60vh;
+      height: 50vh;
       border-radius: var(--card-radius);
       overflow: hidden;
       border: 1px solid var(--border);
@@ -244,7 +244,7 @@
     .shades-tray { display: flex; height: 60px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-top: 15px; }
     .shade-box { flex: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: white; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
 
-    .explore-grid {
+    .explore-grid, .saved-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 20px;
@@ -294,19 +294,9 @@
     }
 
     .toast {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      background: #09090b;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-family: 'Space Mono', monospace;
-      font-size: 0.85rem;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-      z-index: 2000;
+      position: fixed; bottom: 30px; right: 30px; background: #09090b; color: white;
+      padding: 12px 24px; border-radius: 10px; font-family: 'Space Mono', monospace; font-size: 0.85rem;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000;
     }
     .toast.show { opacity: 1; }
   </style>
@@ -315,18 +305,17 @@
 
   <header>
     <div class="logo" onclick="switchView('home')">clythix.colors</div>
-    <div class="nav-right">
-      <div class="tools-dropdown-container">
-        <button class="tools-btn" onclick="toggleDropdown()">
-          <span>Tools</span>
-          <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem;"></i>
-        </button>
-        <div class="dropdown-menu" id="toolsDropdown">
-          <div class="dropdown-item" onclick="switchView('generator'); toggleDropdown();">Palette Generator</div>
-          <div class="dropdown-item" onclick="switchView('explore'); toggleDropdown();">Explore Palettes</div>
-          <div class="dropdown-item" onclick="switchView('imagePicker'); toggleDropdown();">Image Picker</div>
-          <div class="dropdown-item" onclick="switchView('contrast'); toggleDropdown();">Contrast Checker</div>
-        </div>
+    <div class="tools-dropdown-container">
+      <button class="tools-btn" onclick="toggleDropdown()">
+        <span>Tools</span>
+        <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem;"></i>
+      </button>
+      <div class="dropdown-menu" id="toolsDropdown">
+        <div class="dropdown-item" onclick="switchView('generator'); toggleDropdown();">Palette Generator</div>
+        <div class="dropdown-item" onclick="switchView('explore'); toggleDropdown();">Explore Palettes</div>
+        <div class="dropdown-item" onclick="switchView('saved'); toggleDropdown();">Saved Vault</div>
+        <div class="dropdown-item" onclick="switchView('imagePicker'); toggleDropdown();">Image Picker</div>
+        <div class="dropdown-item" onclick="switchView('contrast'); toggleDropdown();">Contrast Checker</div>
       </div>
     </div>
   </header>
@@ -391,6 +380,7 @@
     <div class="workspace-header">
       <h2>Palette Generator <span style="font-size: 0.8rem; font-weight: normal; color: var(--muted);">(Press Spacebar to Generate)</span></h2>
       <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="saveCurrentPalette()"><i class="fa-solid fa-heart"></i> Save</button>
         <button class="btn btn-secondary" onclick="openExportModal()"><i class="fa-solid fa-code"></i> Export</button>
         <button class="btn" onclick="generateColors()"><i class="fa-solid fa-shuffle"></i> Generate</button>
       </div>
@@ -411,7 +401,16 @@
     <div class="explore-grid" id="exploreGrid"></div>
   </div>
 
-  <!-- VIEW 4: IMAGE PICKER -->
+  <!-- VIEW 4: SAVED VAULT -->
+  <div id="saved-view" class="view">
+    <button class="back-nav-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
+    <div class="workspace-header">
+      <h2>Your Saved Palettes Vault</h2>
+    </div>
+    <div class="saved-grid" id="savedGrid"></div>
+  </div>
+
+  <!-- VIEW 5: IMAGE PICKER -->
   <div id="imagePicker-view" class="view">
     <button class="back-nav-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
     <div class="workspace-header">
@@ -426,7 +425,7 @@
     <div id="extractedPalette" style="display: flex; height: 100px; border-radius: 12px; overflow: hidden; margin-top: 20px;"></div>
   </div>
 
-  <!-- VIEW 5: CONTRAST CHECKER -->
+  <!-- VIEW 6: CONTRAST CHECKER -->
   <div id="contrast-view" class="view">
     <button class="back-nav-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
     <div class="workspace-header">
@@ -483,6 +482,7 @@
       
       if (viewName === 'generator') generateColors();
       if (viewName === 'explore') renderExplore();
+      if (viewName === 'saved') renderSaved();
       window.scrollTo(0, 0);
     }
 
@@ -602,6 +602,32 @@
         html += `<div class="shade-box" style="background:${sh}" onclick="navigator.clipboard.writeText('${sh}'); showToast('Copied ${sh}')">${sh}</div>`;
       }
       tray.innerHTML = html;
+    }
+
+    // LocalStorage Saved Vault Logic
+    function saveCurrentPalette() {
+      let saved = JSON.parse(localStorage.getItem('clythix_saved') || '[]');
+      let palette = genColors.map(c => c.hex);
+      saved.push(palette);
+      localStorage.setItem('clythix_saved', JSON.stringify(saved));
+      showToast('Palette saved to vault!');
+    }
+
+    function renderSaved() {
+      const grid = document.getElementById('savedGrid');
+      let saved = JSON.parse(localStorage.getItem('clythix_saved') || '[]');
+      if (saved.length === 0) {
+        grid.innerHTML = `<p style="color:var(--muted);">No saved palettes found in your vault yet. Go to the generator and save some!</p>`;
+        return;
+      }
+      grid.innerHTML = saved.map(pal => `
+        <div class="palette-mini-card">
+          <div class="mini-strips">
+            ${pal.map(col => `<div class="mini-strip" style="background:${col}" onclick="navigator.clipboard.writeText('${col}'); showToast('Copied ${col}')"></div>`).join('')}
+          </div>
+          <span style="font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--muted);">Saved Vault Collection</span>
+        </div>
+      `).join('');
     }
 
     // Export Modal Logic
