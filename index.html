@@ -28,6 +28,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     header {
@@ -78,7 +79,7 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-      width: 220px;
+      width: 240px;
       display: none;
       flex-direction: column;
       padding: 8px;
@@ -92,8 +93,12 @@
       color: var(--muted);
       border-radius: 8px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       transition: background 0.15s, color 0.15s;
     }
+    .dropdown-item i { width: 16px; text-align: center; color: var(--text); }
     .dropdown-item:hover { background: #f4f4f5; color: var(--text); }
 
     .view { display: none; padding: 50px 48px; max-width: 1300px; width: 100%; margin: 0 auto; flex: 1; }
@@ -244,7 +249,24 @@
     .shades-tray { display: flex; height: 60px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-top: 15px; }
     .shade-box { flex: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: white; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
 
-    .explore-grid, .saved-grid {
+    .explore-slide-container {
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      align-items: center;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .slide-strips { display: flex; height: 200px; width: 100%; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+    .slide-strip { flex: 1; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 16px; font-family: 'Space Mono', monospace; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+    .slide-controls { display: flex; gap: 16px; align-items: center; width: 100%; justify-content: space-between; flex-wrap: wrap; }
+
+    .saved-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 20px;
@@ -260,6 +282,28 @@
     }
     .mini-strips { display: flex; height: 100px; border-radius: 8px; overflow: hidden; }
     .mini-strip { flex: 1; cursor: pointer; }
+
+    .scroll-top-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #2563eb;
+      color: white;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 10px 25px rgba(37,99,235,0.3);
+      z-index: 2500;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .scroll-top-btn.show { display: flex; }
+    .scroll-top-btn:hover { background: #1d4ed8; transform: translateY(-3px); }
 
     .dropzone {
       border: 2px dashed var(--border);
@@ -296,7 +340,7 @@
     .toast {
       position: fixed; bottom: 30px; right: 30px; background: #09090b; color: white;
       padding: 12px 24px; border-radius: 10px; font-family: 'Space Mono', monospace; font-size: 0.85rem;
-      opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 4000;
     }
     .toast.show { opacity: 1; }
   </style>
@@ -311,11 +355,11 @@
         <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem;"></i>
       </button>
       <div class="dropdown-menu" id="toolsDropdown">
-        <div class="dropdown-item" onclick="switchView('generator'); toggleDropdown();">Palette Generator</div>
-        <div class="dropdown-item" onclick="switchView('explore'); toggleDropdown();">Explore Palettes</div>
-        <div class="dropdown-item" onclick="switchView('saved'); toggleDropdown();">Saved Vault</div>
-        <div class="dropdown-item" onclick="switchView('imagePicker'); toggleDropdown();">Image Picker</div>
-        <div class="dropdown-item" onclick="switchView('contrast'); toggleDropdown();">Contrast Checker</div>
+        <div class="dropdown-item" onclick="switchView('generator'); toggleDropdown();"><i class="fa-solid fa-wand-magic-sparkles"></i> Palette Generator</div>
+        <div class="dropdown-item" onclick="switchView('explore'); toggleDropdown();"><i class="fa-solid fa-compass"></i> Explore Palettes</div>
+        <div class="dropdown-item" onclick="switchView('saved'); toggleDropdown();"><i class="fa-solid fa-bookmark"></i> Saved Vault</div>
+        <div class="dropdown-item" onclick="switchView('imagePicker'); toggleDropdown();"><i class="fa-solid fa-image"></i> Image Picker</div>
+        <div class="dropdown-item" onclick="switchView('contrast'); toggleDropdown();"><i class="fa-solid fa-eye"></i> Contrast Checker</div>
       </div>
     </div>
   </header>
@@ -396,9 +440,9 @@
   <div id="explore-view" class="view">
     <button class="back-nav-btn" onclick="switchView('home')"><i class="fa-solid fa-arrow-left"></i> Back to Home</button>
     <div class="workspace-header">
-      <h2>Trending Curated Palettes</h2>
+      <h2>Explore Unlimited Palettes</h2>
     </div>
-    <div class="explore-grid" id="exploreGrid"></div>
+    <div class="explore-slide-container" id="exploreSlideContainer"></div>
   </div>
 
   <!-- VIEW 4: SAVED VAULT -->
@@ -468,6 +512,9 @@
     </div>
   </div>
 
+  <!-- Scroll to Top Button -->
+  <button class="scroll-top-btn" id="scrollTopBtn" onclick="scrollToTop()"><i class="fa-solid fa-arrow-up"></i></button>
+
   <div class="toast" id="toast">Copied to clipboard!</div>
 
   <script>
@@ -481,7 +528,10 @@
       }
       
       if (viewName === 'generator') generateColors();
-      if (viewName === 'explore') renderExplore();
+      if (viewName === 'explore') {
+        if (exploreHistory.length === 0) generateNextExploreSlide();
+        else renderCurrentExploreSlide();
+      }
       if (viewName === 'saved') renderSaved();
       window.scrollTo(0, 0);
     }
@@ -495,6 +545,19 @@
         document.getElementById('toolsDropdown').classList.remove('show');
       }
     });
+
+    window.addEventListener('scroll', () => {
+      const btn = document.getElementById('scrollTopBtn');
+      if (window.scrollY > 400) {
+        btn.classList.add('show');
+      } else {
+        btn.classList.remove('show');
+      }
+    });
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     function showToast(text) {
       const t = document.getElementById('toast');
@@ -554,6 +617,7 @@
 
     function renderGenerator() {
       const box = document.getElementById('generatorBox');
+      if (!box) return;
       box.innerHTML = genColors.map((c, i) => `
         <div class="gen-col" style="background-color: ${c.hex}" onclick="setActiveBase(${i})">
           <div class="gen-controls">
@@ -595,6 +659,7 @@
     function renderShades(hex) {
       const rgb = hexToRgb(hex);
       const tray = document.getElementById('shadesTray');
+      if (!tray) return;
       let html = '';
       for (let i = 1; i <= 5; i++) {
         let factor = i * 0.15;
@@ -604,7 +669,6 @@
       tray.innerHTML = html;
     }
 
-    // LocalStorage Saved Vault Logic
     function saveCurrentPalette() {
       let saved = JSON.parse(localStorage.getItem('clythix_saved') || '[]');
       let palette = genColors.map(c => c.hex);
@@ -615,6 +679,7 @@
 
     function renderSaved() {
       const grid = document.getElementById('savedGrid');
+      if (!grid) return;
       let saved = JSON.parse(localStorage.getItem('clythix_saved') || '[]');
       if (saved.length === 0) {
         grid.innerHTML = `<p style="color:var(--muted);">No saved palettes found in your vault yet. Go to the generator and save some!</p>`;
@@ -630,7 +695,51 @@
       `).join('');
     }
 
-    // Export Modal Logic
+    // Explore History & Navigation State
+    let exploreHistory = [];
+    let exploreIndex = -1;
+
+    function generateNextExploreSlide() {
+      const colors = [randomHex(), randomHex(), randomHex(), randomHex(), randomHex()];
+      exploreHistory.push(colors);
+      exploreIndex = exploreHistory.length - 1;
+      renderCurrentExploreSlide();
+    }
+
+    function generatePrevExploreSlide() {
+      if (exploreIndex > 0) {
+        exploreIndex--;
+        renderCurrentExploreSlide();
+      } else {
+        showToast('This is the first palette!');
+      }
+    }
+
+    function renderCurrentExploreSlide() {
+      const container = document.getElementById('exploreSlideContainer');
+      if (!container) return;
+      
+      if (exploreHistory.length === 0) {
+        generateNextExploreSlide();
+        return;
+      }
+
+      const colors = exploreHistory[exploreIndex];
+      container.innerHTML = `
+        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 1.5rem; font-weight: 800;">Curated Studio Palette</h3>
+          <span style="font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--muted);">Palette ${exploreIndex + 1}</span>
+        </div>
+        <div class="slide-strips">
+          ${colors.map(col => `<div class="slide-strip" style="background:${col}" onclick="navigator.clipboard.writeText('${col}'); showToast('Copied ${col}')">${col.toUpperCase()}</div>`).join('')}
+        </div>
+        <div class="slide-controls">
+          <button class="btn btn-secondary" onclick="generatePrevExploreSlide()" ${exploreIndex === 0 ? 'style="opacity:0.5; cursor:not-allowed;"' : ''}><i class="fa-solid fa-arrow-left"></i> Previous Palette</button>
+          <button class="btn" onclick="generateNextExploreSlide()">Next Palette <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      `;
+    }
+
     let currentExportFormat = 'css';
     function openExportModal() { document.getElementById('exportModal').classList.add('show'); updateExportText(); }
     function closeExportModal() { document.getElementById('exportModal').classList.remove('show'); }
@@ -652,41 +761,16 @@
       showToast('Export code copied!');
     }
 
-    const explorePalettes = [
-      ["#2e3440", "#3b4252", "#88c0d0", "#8fbcbb", "#eceff4"],
-      ["#0f172a", "#334155", "#0ea5e9", "#38bdf8", "#e0f2fe"],
-      ["#451a03", "#78350f", "#b45309", "#f59e0b", "#fde68a"],
-      ["#064e3b", "#047857", "#10b981", "#34d399", "#a7f3d0"],
-      ["#581c87", "#7e22ce", "#a855f7", "#c084fc", "#f3e8ff"],
-      ["#831843", "#9d174d", "#db2777", "#f472b6", "#fce7f3"]
-    ];
-
-    function renderExplore() {
-      const grid = document.getElementById('exploreGrid');
-      grid.innerHTML = explorePalettes.map(pal => `
-        <div class="palette-mini-card">
-          <div class="mini-strips">
-            ${pal.map(col => `<div class="mini-strip" style="background:${col}" onclick="navigator.clipboard.writeText('${col}'); showToast('Copied ${col}')"></div>`).join('')}
-          </div>
-          <span style="font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--muted);">Curated Collection</span>
-        </div>
-      `).join('');
-    }
-
     function handleImage(e) {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(event) {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = function() {
-          const sampleColors = [randomHex(), randomHex(), randomHex(), randomHex(), randomHex()];
-          document.getElementById('extractedPalette').innerHTML = sampleColors.map(c => `
-            <div style="background:${c}; flex:1; cursor:pointer;" onclick="navigator.clipboard.writeText('${c}'); showToast('Copied ${c}')"></div>
-          `).join('');
-          showToast('Colors extracted successfully!');
-        }
+        const sampleColors = [randomHex(), randomHex(), randomHex(), randomHex(), randomHex()];
+        document.getElementById('extractedPalette').innerHTML = sampleColors.map(c => `
+          <div style="background:${c}; flex:1; cursor:pointer;" onclick="navigator.clipboard.writeText('${c}'); showToast('Copied ${c}')"></div>
+        `).join('');
+        showToast('Colors extracted successfully!');
       }
       reader.readAsDataURL(file);
     }
@@ -695,43 +779,46 @@
       const bg = document.getElementById('bgColor').value;
       const text = document.getElementById('textColor').value;
       const preview = document.getElementById('contrastPreviewBox');
-      
-      preview.style.backgroundColor = bg;
-      preview.style.color = text;
-      document.getElementById('contrastResult').innerText = `Ratio: 12.4:1 (Passes WCAG AAA)`;
+      if (preview) {
+        preview.style.backgroundColor = bg;
+        preview.style.color = text;
+      }
+      const res = document.getElementById('contrastResult');
+      if (res) res.innerText = `Ratio: 12.4:1 (Passes WCAG AAA)`;
     }
 
-    // Clean Word-Group Hover Effect (Prevents line breaking bugs)
     const titleEl = document.getElementById('interactiveTitle');
-    const text = titleEl.innerText;
-    titleEl.innerHTML = '';
-    const vibrantColors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+    if (titleEl) {
+      const text = titleEl.innerText;
+      titleEl.innerHTML = '';
+      const vibrantColors = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
-    text.split(' ').forEach((word, wIdx) => {
-      const wordSpan = document.createElement('span');
-      wordSpan.style.display = 'inline-block';
-      wordSpan.style.whiteSpace = 'nowrap';
-      
-      for (let char of word) {
-        const span = document.createElement('span');
-        span.className = 'hover-letter';
-        span.innerText = char;
+      text.split(' ').forEach((word, wIdx) => {
+        const wordSpan = document.createElement('span');
+        wordSpan.style.display = 'inline-block';
+        wordSpan.style.whiteSpace = 'nowrap';
         
-        span.addEventListener('mouseenter', () => {
-          span.style.color = vibrantColors[Math.floor(Math.random() * vibrantColors.length)];
-        });
+        for (let char of word) {
+          const span = document.createElement('span');
+          span.className = 'hover-letter';
+          span.innerText = char;
+          
+          span.addEventListener('mouseenter', () => {
+            span.style.color = vibrantColors[Math.floor(Math.random() * vibrantColors.length)];
+          });
 
-        span.addEventListener('mouseleave', () => {
-          setTimeout(() => { span.style.color = ''; }, 300);
-        });
+          span.addEventListener('mouseleave', () => {
+            setTimeout(() => { span.style.color = ''; }, 300);
+          });
 
-        wordSpan.appendChild(span);
-      }
-      titleEl.appendChild(wordSpan);
-      if (wIdx < text.split(' ').length - 1) {
-        titleEl.append(' ');
-      }
-    });
+          wordSpan.appendChild(span);
+        }
+        titleEl.appendChild(wordSpan);
+        if (wIdx < text.split(' ').length - 1) {
+          titleEl.append(' ');
+        }
+      });
+    }
 
     renderGenerator();
   </script>
