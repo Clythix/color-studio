@@ -156,10 +156,14 @@
       font-weight: 700;
       font-size: 0.95rem;
       cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       transition: background 0.2s, transform 0.1s;
     }
     .btn:hover { background: #1d4ed8; transform: translateY(-1px); }
-    .btn-secondary { background: #f4f4f5; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary { background: #f4f4f5; color: var(--text); border: 1px solid var(--border); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
     .btn-secondary:hover { background: #e4e4e7; }
 
     .cards-grid {
@@ -371,8 +375,8 @@
         <h1 class="hero-title" id="interactiveTitle">The super fast color palettes generator!</h1>
         <p class="hero-subtitle">Create perfect palettes for your designs or get inspired by thousands of beautiful color schemes instantly. Hit spacebar inside generator.</p>
         <div class="hero-buttons">
-          <button class="btn" onclick="switchView('generator')">Start the Generator</button>
-          <button class="btn btn-secondary" onclick="switchView('explore')">Explore Palettes</button>
+          <a class="btn" href="https://github.com/clythix" target="_blank"><i class="fa-brands fa-github"></i> GitHub Profile</a>
+          <a class="btn btn-secondary" href="mailto:hello@clythix.com"><i class="fa-solid fa-envelope"></i> Get in Touch</a>
         </div>
       </div>
       <div>
@@ -383,6 +387,7 @@
       </div>
     </div>
 
+    <!-- 4 ORIGINAL FEATURE CARDS -->
     <div class="cards-grid">
       <div class="feature-card" style="background: #ccfbf1;" onclick="switchView('generator')">
         <div>
@@ -695,7 +700,6 @@
       `).join('');
     }
 
-    // Explore History & Navigation State
     let exploreHistory = [];
     let exploreIndex = -1;
 
